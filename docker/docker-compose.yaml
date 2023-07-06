@@ -1,0 +1,52 @@
+version: "3.3"
+services:
+
+  redis:
+    image: redislabs/rejson:latest
+    container_name: net_redis
+    networks:
+      - redis_net
+    ports:
+      - "6379:6379"
+
+  mongo:
+    image: mongo:latest
+    container_name: net_mongodb
+    ports:
+      - "27017-27019:27017-27019"
+    volumes:
+      - mongo-volume:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=soa-mongo-db
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+    expose:
+      - "27017"
+      - "27018"
+      - "27019"
+
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    networks:
+      - net_influxdb
+    ports:
+      - "8086:8086"
+    expose:
+      - "8086"
+    volumes:
+      - influxdb-volume:/var/lib/influxdb
+
+networks:
+  redis_net:
+    external: true
+  net_influxdb:
+    external: true
+
+volumes:
+  mlflow-volume:
+    external: false
+  mongo-volume:
+    external: false
+  influxdb-volume:
+    external: false    

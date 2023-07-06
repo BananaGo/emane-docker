@@ -548,31 +548,34 @@ class EmaneTopology:
         try:
             binding_path = os.getcwd() + '/container_helpers'
             config_path = binding_path + '/configs/' + node.name
-            container = self.docker_client.containers.run(self.config['docker_image'], detach=True,
-                                                          network=self.emane_interface,
-                                                          mac_address='02:00:%02x:01:00:01' % (
-                                                              node.index + 1),
-                                                          cap_add=['sys_nice', 'NET_ADMIN'],
-                                                          name=node.name,
-                                                          privileged=True,
-                                                          tty=True,
-                                                          hostname=node.name,
-                                                          ports={'{}/tcp'.format(port): port},
-                                                          volumes={
-                                                              config_path: {
-                                                                  'bind': '/etc/quagga'},
-                                                              binding_path + '/bootstrap': {
-                                                                  'bind': '/bootstrap'},
-                                                              binding_path + '/fpm': {
-                                                                  'bind': '/fpm'},
-                                                              '/lib/modules': {
-                                                                  'bind': '/lib/modules',
-                                                                  'mode': 'ro'},
-                                                              '/dev/net/tun': {
-                                                                  'bind': '/dev/net/tun'},
-                                                              '/var/run/docker.sock': {
-                                                                  'bind': '/var/run/docker.sock'}},
-                                                          command=node.bootstrapfile)
+            container = self.docker_client.containers.run(
+                self.config['docker_image'], 
+                detach=True,
+                network=self.emane_interface,
+                mac_address='02:00:%02x:01:00:01' % (node.index + 1),
+                cap_add=['sys_nice', 'NET_ADMIN'],
+                name=node.name,
+                privileged=True,
+                tty=True,
+                hostname=node.name,
+                ports={'{}/tcp'.format(port): port},
+                volumes={
+                    config_path: {
+                        'bind': '/etc/quagga'},
+                    binding_path + '/bootstrap': {
+                        'bind': '/bootstrap'},
+                    binding_path + '/fpm': {
+                        'bind': '/fpm'},
+                    '/lib/modules': {
+                        'bind': '/lib/modules',
+                        'mode': 'ro'},
+                    '/dev/net/tun': {
+                        'bind': '/dev/net/tun'},
+                    '/var/run/docker.sock': {
+                        'bind': '/var/run/docker.sock'}
+                }, 
+                command=node.bootstrapfile
+            )
 
             self.containers[node.name] = container
             # Create telegraf configuration and copy to the container.
@@ -589,8 +592,12 @@ class EmaneTopology:
             self.container_cp(node, telegraf_conf_path + str(node.index),
                               '/etc/telegraf/telegraf.conf')
             os.remove(telegraf_conf_path + str(node.index))
+
             # Start telegraf
             container.exec_run('telegraf &', detach=True)
+
+            # connect cotainer to net_redis network
+            self.docker_client.networks.get('redis_net').connect(container)
 
         except FileNotFoundError:
             return LOG.error('%s container cannot be started, is Docker daemon running?',
