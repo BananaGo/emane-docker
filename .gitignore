@@ -1,3 +1,5 @@
+container_helpers/
+
 .vagrant
 .DS_Store
 # Ansible

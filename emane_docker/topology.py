@@ -251,8 +251,10 @@ class EmaneTopology:
                 # lans = ""
                 org = '10.100.0.%d/24' % (node.index + 1)
                 for interface_id, _ in enumerate(['emane0']):
+                    config = '[global] \n\tfork 1\n\tplugin mpr\n\tplugin olsrv2\n\tplugin olsrv2info\n\n'
+                    config = config + '[log] \n\tfile /var/log/olsrd2.log\n\n'
                     # org = link.node1_ipv4 if node == link.node1 else link.node2_ipv4
-                    config = '[interface=emane%d]\n' % interface_id
+                    config = config + '[emane%d]\n' % interface_id
                     config = config + '\thello_interval 0.5\n\thello_validity 2.5\n\t'
                     config = config + 'ifaddr_filter default_accept\n\t'
                     # config = config + 'ifaddr_filter {}.0/24\n\t'.format(link.node1_ipv4[:-2])
@@ -518,7 +520,7 @@ class EmaneTopology:
         while True:
             command = input('emane-docker> ')
             # TODO: update commands START
-            if command == 'quit':
+            if command == 'quit' or command == 'exit':
                 break
             if command == 'start-experiment':
                 LOG.info('Experiment will be initialized now... '
@@ -532,7 +534,7 @@ class EmaneTopology:
             #     for r in self.redis_clients:
             #         r.publish('cmd', 'init')
             elif command in ('help', '?'):
-                print('Available commands are:\n%s' % '\n'.join(['help', 'quit']))
+                print('Available commands are:\n%s' % '\n'.join(['help', 'quit/exit']))
             # TODO: update commands! END
             else:
                 print('%s is not a valid command. Type `help` to see available commands.' % command)
@@ -611,6 +613,7 @@ class EmaneTopology:
 
     def start_container_helpers(self, node):
         self.start_emane_on_node(node)
+
         LOG.debug('Configuring default rules for %s', node.name)
         # self.containers[node.name].exec_run('/bootstrap/default.py', detach=True)
         if Constant.OLSR_CP in self.config['control_planes']:
@@ -619,9 +622,12 @@ class EmaneTopology:
             self.containers[node.name].exec_run('olsrd -f /etc/quagga/olsrd.conf', detach=True)
         elif Constant.OLSRv2_CP in self.config['control_planes']:
             LOG.debug('Starting OLSRv2 at node %s', node.name)
+
             # self.containers[node.name].exec_run('/bootstrap/olsr2.py', detach=True)
-            self.containers[node.name].exec_run('olsrd2_static -l /etc/quagga/olsrd2.conf',
-                                                detach=True)
+            LOG.warning('Starting OLSRv2 at node %s', node.name + ' with default interface emane0')
+            cmd = f"olsrd2_static -l /etc/quagga/olsrd2.conf emane0"
+            print(cmd)
+            self.containers[node.name].exec_run(cmd, detach=True)
         else:
             # TODO: fix FPM
             if Constant.OSPF_CP in self.config['control_planes']:

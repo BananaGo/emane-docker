@@ -6,7 +6,7 @@
 # ordered list of control planes, currently sdn, ospf, olsr, olsrv2 and bgp are supported
 control_planes:
   - sdn
-  - olsr
+  - olsrv2
 # dataplane, only openflow and sonic are supported
 dataplane: openflow
 # Specifies the docker image for nodes. If the image is not present it will be pulled from DockerHub
